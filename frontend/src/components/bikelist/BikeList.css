@@ -1,140 +1,290 @@
+/* Main container */
 .bike-list-container {
-    padding: var(--space-md) 0;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Header section */
+.bike-list-header {
+  margin-bottom: 2rem;
+}
+
+.bike-list-header h1 {
+  font-size: 2.5rem;
+  color: #333;
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+/* Filter controls */
+.filter-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.search-box {
+  position: relative;
+  width: 100%;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.search-box input {
+  width: 100%;
+  padding: 0.8rem 1rem 0.8rem 2.5rem;
+  border: 1px solid #ddd;
+  border-radius: 25px;
+  font-size: 1rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.search-box input:focus {
+  outline: none;
+  border-color: #4a90e2;
+  box-shadow: 0 2px 12px rgba(74, 144, 226, 0.2);
+}
+
+.search-icon {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #777;
+}
+
+.filter-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.hub-selector select {
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  border: 1px solid #ddd;
+  background-color: white;
+  cursor: pointer;
+  font-size: 0.9rem;
+  min-width: 200px;
+}
+
+.hub-selector select:focus {
+  outline: none;
+  border-color: #4a90e2;
+}
+
+.filter-buttons button, .hub-selector select {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 20px;
+  background-color: #f0f0f0;
+  color: #555;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.9rem;
+}
+
+.filter-buttons button:hover {
+  background-color: #e0e0e0;
+}
+
+.filter-buttons button.active {
+  background-color: #4a90e2;
+  color: white;
+}
+
+/* Bike grid */
+.bike-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 2rem;
+  margin-top: 2rem;
+}
+
+/* Bike card */
+.bike-card {
+  background: white;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  position: relative;
+}
+
+.bike-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+}
+
+.bike-image {
+  height: 200px;
+  overflow: hidden;
+  position: relative;
+}
+
+.bike-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.5s ease;
+}
+
+.bike-card:hover .bike-image img {
+  transform: scale(1.05);
+}
+
+.availability-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  padding: 0.3rem 0.6rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: bold;
+  color: white;
+}
+
+.availability-badge.available {
+  background-color: #28a745;
+}
+
+.availability-badge.unavailable {
+  background-color: #dc3545;
+}
+
+.bike-info {
+  padding: 1.5rem;
+}
+
+.bike-info h3 {
+  margin: 0 0 0.5rem 0;
+  color: #333;
+  font-size: 1.3rem;
+}
+
+.bike-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+  margin-bottom: 1rem;
+}
+
+.bike-type {
+  color: #4a90e2;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.bike-hub {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.location-icon {
+  font-size: 0.8rem;
+}
+
+.bike-description {
+  color: #666;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin-bottom: 1.5rem;
+}
+
+.bike-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.bike-price {
+  font-weight: bold;
+  color: #333;
+  font-size: 1.1rem;
+}
+
+.reserve-btn {
+  padding: 0.5rem 1rem;
+  background-color: #4a90e2;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  font-weight: 600;
+}
+
+.reserve-btn:hover {
+  background-color: #357ab8;
+}
+
+.reserve-btn.disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+/* Reservation success message */
+.reservation-success {
+  background-color: #d4edda;
+  color: #155724;
+  padding: 1rem;
+  border-radius: 5px;
+  margin-bottom: 1rem;
+  text-align: center;
+  animation: fadeIn 0.5s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* No results message */
+.no-results {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 2rem;
+  color: #666;
+  font-size: 1.1rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .bike-list-header h1 {
+    font-size: 2rem;
   }
   
-  .bike-list-header {
-    display: flex;
-    align-items: center;
-    gap: var(--space-sm);
-    font-size: var(--text-xl);
-    margin-bottom: var(--space-lg);
-    color: var(--dark);
+  .filter-row {
+    flex-direction: column;
+    align-items: stretch;
   }
   
-  .bike-icon {
-    font-size: var(--text-2xl);
+  .hub-selector select {
+    width: 100%;
   }
-  
-  .empty-state {
-    text-align: center;
-    padding: var(--space-xl);
-    background: white;
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow-sm);
-  }
-  
-  .empty-state p {
-    font-size: var(--text-lg);
-    margin-bottom: var(--space-xs);
-    color: var(--dark);
-  }
-  
-  .empty-state small {
-    color: var(--gray);
+}
+
+@media (max-width: 480px) {
+  .bike-list-container {
+    padding: 1rem;
   }
   
   .bike-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: var(--space-md);
+    grid-template-columns: 1fr;
   }
-  
-  .bike-card {
-    background: white;
-    border-radius: var(--radius-md);
-    padding: var(--space-lg);
-    box-shadow: var(--shadow-sm);
-    transition: var(--transition-normal);
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-md);
-    border-top: 4px solid transparent;
-  }
-  
-  .bike-card:hover {
-    transform: translateY(-5px);
-    box-shadow: var(--shadow-md);
-  }
-  
-  .bike-card.available {
-    border-top-color: var(--success);
-  }
-  
-  .bike-card.reserved {
-    border-top-color: var(--warning);
-  }
-  
-  .bike-card.in_maintenance {
-    border-top-color: var(--danger);
-  }
-  
-  .bike-model {
-    font-size: var(--text-lg);
-    font-weight: 600;
-    color: var(--dark);
-  }
-  
-  .bike-status {
-    display: flex;
-    align-items: center;
-    gap: var(--space-xs);
-    font-size: var(--text-sm);
-    text-transform: capitalize;
-  }
-  
-  .status-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: var(--radius-full);
-  }
-  
-  .available .status-dot {
-    background: var(--success);
-  }
-  
-  .reserved .status-dot {
-    background: var(--warning);
-  }
-  
-  .in_maintenance .status-dot {
-    background: var(--danger);
-  }
-  
-  .reserve-btn {
-    margin-top: auto;
-    padding: var(--space-sm) var(--space-md);
-    background: var(--primary);
-    color: white;
-    border: none;
-    border-radius: var(--radius-sm);
-    font-weight: 500;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    transition: var(--transition-fast);
-  }
-  
-  .reserve-btn:hover:not(:disabled) {
-    background: var(--primary-light);
-  }
-  
-  .reserve-btn:disabled {
-    background: var(--gray);
-    cursor: not-allowed;
-  }
-  
-  .btn-icon {
-    font-size: var(--text-lg);
-    transition: var(--transition-fast);
-  }
-  
-  .reserve-btn:hover:not(:disabled) .btn-icon {
-    transform: translateX(3px);
-  }
-  
-  @media (max-width: 768px) {
-    .bike-grid {
-      grid-template-columns: 1fr;
-    }
-  }
+}

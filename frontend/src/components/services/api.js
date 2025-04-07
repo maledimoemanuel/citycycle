@@ -1,34 +1,29 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5000/api',
-  headers: {
-    'Content-Type': 'application/json'
-  }
+  baseURL: 'http://localhost:5000/api',
 });
 
-// Request interceptor
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers['Authorization'] = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
-
-// Response interceptor
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response.status === 401) {
-      localStorage.removeItem('token');
-      window.location = '/login';
-    }
-    return Promise.reject(error);
+// Add auth token to requests
+api.interceptors.request.use(config => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
   }
-);
+  return config;
+});
 
-export default api;
+export default {
+  // Auth
+  register: (email, password, role) => api.post('/register', { email, password, role }),
+  login: (email, password) => api.post('/login', { email, password }),
+
+  // Hubs
+  getHubs: () => api.get('/hubs'),
+
+  // Bikes
+  getBikes: () => api.get('/bikes'),
+  addBike: (bikeData) => api.post('/bikes', bikeData),
+  updateBike: (id, updates) => api.patch(`/bikes/${id}`, updates),
+  deleteBike: (id) => api.delete(`/bikes/${id}`),
+};

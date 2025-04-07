@@ -4,9 +4,9 @@ import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
 import Login from './components/auth/Login';
 import Register from './components/auth/Register';
-import Dashboard from './components/dashboard/Dashboard';
 import './App.css';
 import BikeList from './components/bikelist/BikeList';
+import MaintenanceAdmin from './components/stuff/MaintenanceAdmin';
 
 function App() {
   return (
@@ -14,8 +14,8 @@ function App() {
       <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/dashboard" element={<Dashboard />} />
         <Route path='/bikelist' element={<BikeList />} />
+        <Route path='/admin' element={<MaintenanceAdmin/>} />
       </Routes>
     </>
   );

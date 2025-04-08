@@ -13,14 +13,12 @@ A bicycle-sharing platform for Amsterdam, built with the MERN stack.
 - **Testing**: Postman
 
 ## Getting Started
-### Backend Setup
+### Backend & Frontend Setup
 ```sh
 cd backend
 npm install
 node server.js
 
-### Frontend Setup
-```sh
-cd frondend
+cd frontend
 npm install
 npm start

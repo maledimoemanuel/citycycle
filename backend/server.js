@@ -12,7 +12,7 @@ app.use(cors());
 app.use(express.json());
 
 // MongoDB Connection
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/citycycle', {
+mongoose.connect(process.env.MONGODB_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true
 })
@@ -113,8 +113,7 @@ app.get('/api/bikes', async (req, res) => {
   }
 });
 
-app.post('/api/bikes', auth, async (req, res) => {
-  if (req.user.role !== 'admin') return res.status(403).send();
+app.post('/api/bikes', async (req, res) => {
   
   try {
     const bike = new Bike(req.body);
@@ -146,6 +145,35 @@ app.delete('/api/bikes/:id', auth, async (req, res) => {
     res.send(bike);
   } catch (err) {
     res.status(500).send();
+  }
+});
+
+app.get('/api/bikes/maintenance-due', async (req, res) => {
+  try {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    const bikes = await Bike.find({
+      $or: [
+        { lastMaintenance: { $lt: thirtyDaysAgo } },
+        { lastMaintenance: { $exists: false } }
+      ]
+    }).populate('hub');
+
+    res.send(bikes);
+  } catch (err) {
+    res.status(500).send();
+  }
+});
+
+// Add Hub Creation Route
+app.post('/api/hubs', async (req, res) => {
+    try {
+      const hub = new Hub(req.body);
+      await hub.save();
+      res.status(201).send(hub);
+  } catch (err) {
+      res.status(400).send(err);
   }
 });
 

@@ -5,32 +5,38 @@ import api from '../services/api';
 
 const MaintenanceAdmin = () => {
   const { user } = useContext(AuthContext);
+  const [viewMode, setViewMode] = useState('all');
   const [bikes, setBikes] = useState([]);
   const [hubs, setHubs] = useState([]);
-  const [selectedHub, setSelectedHub] = useState('all');
   const [isAddingBike, setIsAddingBike] = useState(false);
+  const [isAddingHub, setIsAddingHub] = useState(false);
+  const [loading, setLoading] = useState(false);
+
   const [newBike, setNewBike] = useState({
     name: '',
     type: 'road',
     hub: '',
     status: 'available',
     image: '',
-    description: ''
+    description: '',
   });
-  const [loading, setLoading] = useState(false);
+
+  const [newHub, setNewHub] = useState({
+    name: '',
+    location: '',
+    capacity: 20,
+  });
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         const [bikesResponse, hubsResponse] = await Promise.all([
           api.getBikes(),
-          api.getHubs()
+          api.getHubs(),
         ]);
+
         setBikes(bikesResponse.data);
         setHubs(hubsResponse.data);
-        if (hubsResponse.data.length > 0) {
-          setNewBike(prev => ({ ...prev, hub: hubsResponse.data[0]._id }));
-        }
       } catch (err) {
         console.error('Failed to fetch data', err);
       }
@@ -38,9 +44,21 @@ const MaintenanceAdmin = () => {
     fetchData();
   }, []);
 
-  const filteredBikes = selectedHub === 'all' 
-    ? bikes 
-    : bikes.filter(bike => bike.hub._id === selectedHub);
+  const handleBikeInputChange = (e) => {
+    const { name, value } = e.target;
+    setNewBike(prevState => ({
+      ...prevState,
+      [name]: value,
+    }));
+  };
+
+  const handleHubInputChange = (e) => {
+    const { name, value } = e.target;
+    setNewHub(prevState => ({
+      ...prevState,
+      [name]: value,
+    }));
+  };
 
   const handleAddBike = async () => {
     setLoading(true);
@@ -51,10 +69,10 @@ const MaintenanceAdmin = () => {
       setNewBike({
         name: '',
         type: 'road',
-        hub: hubs[0]?._id || '',
+        hub: '',
         status: 'available',
         image: '',
-        description: ''
+        description: '',
       });
     } catch (err) {
       console.error('Failed to add bike', err);
@@ -63,92 +81,137 @@ const MaintenanceAdmin = () => {
     }
   };
 
-  const updateBikeStatus = async (bikeId, newStatus) => {
+  const handleAddHub = async () => {
+    setLoading(true);
     try {
-      const updatedBike = await api.updateBike(bikeId, { status: newStatus });
-      setBikes(bikes.map(bike => 
-        bike._id === bikeId ? updatedBike.data : bike
-      ));
+      const response = await api.addHub(newHub);
+      setHubs([...hubs, response.data]);
+      setIsAddingHub(false);
+      setNewHub({
+        name: '',
+        location: '',
+        capacity: 20,
+      });
     } catch (err) {
-      console.error('Update failed', err);
-    }
-  };
-
-  const removeBike = async (bikeId) => {
-    try {
-      await api.deleteBike(bikeId);
-      setBikes(bikes.filter(bike => bike._id !== bikeId));
-    } catch (err) {
-      console.error('Failed to remove bike', err);
+      console.error('Failed to add hub', err);
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <div className="admin-bike-management">
-      <h1>CityCycle Amsterdam - Admin Dashboard</h1>
-      
+      <h1>CityCycle Amsterdam - Maintenance Dashboard</h1>
+
       <div className="controls">
-        <select 
-          value={selectedHub} 
-          onChange={(e) => setSelectedHub(e.target.value)}
-        >
-          <option value="all">All Hubs</option>
-          {hubs.map(hub => (
-            <option key={hub._id} value={hub._id}>{hub.name}</option>
-          ))}
-        </select>
-        
-        <button onClick={() => setIsAddingBike(true)}>
-          + Add New Bike
-        </button>
+        <div className="view-controls">
+          <button
+            className={viewMode === 'all' ? 'active' : ''}
+            onClick={() => setViewMode('all')}
+          >
+            All Bikes
+          </button>
+          <button
+            className={viewMode === 'maintenance-due' ? 'active' : ''}
+            onClick={() => setViewMode('maintenance-due')}
+          >
+            Maintenance Due
+          </button>
+        </div>
+
+        <div className="action-buttons">
+          <button onClick={() => setIsAddingBike(true)}>
+            + Add New Bike
+          </button>
+          <button onClick={() => setIsAddingHub(true)}>
+            + Add New Hub
+          </button>
+        </div>
       </div>
 
       {isAddingBike && (
-        <div className="add-bike-form">
+        <div className="add-form">
           <h2>Add New Bike</h2>
           <input
             type="text"
+            name="name"
             placeholder="Bike Name"
             value={newBike.name}
-            onChange={(e) => setNewBike({ ...newBike, name: e.target.value })}
-            required
+            onChange={handleBikeInputChange}
           />
           <select
+            name="type"
             value={newBike.type}
-            onChange={(e) => setNewBike({ ...newBike, type: e.target.value })}
-            required
+            onChange={handleBikeInputChange}
           >
             <option value="road">Road Bike</option>
             <option value="mountain">Mountain Bike</option>
             <option value="gravel">Gravel Bike</option>
           </select>
           <select
+            name="hub"
             value={newBike.hub}
-            onChange={(e) => setNewBike({ ...newBike, hub: e.target.value })}
-            required
+            onChange={handleBikeInputChange}
           >
+            <option value="">Select Hub</option>
             {hubs.map(hub => (
               <option key={hub._id} value={hub._id}>{hub.name}</option>
             ))}
           </select>
           <input
             type="text"
+            name="image"
             placeholder="Image URL"
             value={newBike.image}
-            onChange={(e) => setNewBike({ ...newBike, image: e.target.value })}
+            onChange={handleBikeInputChange}
           />
           <textarea
+            name="description"
             placeholder="Description"
             value={newBike.description}
-            onChange={(e) => setNewBike({ ...newBike, description: e.target.value })}
+            onChange={handleBikeInputChange}
           />
           <div className="form-actions">
             <button onClick={() => setIsAddingBike(false)}>Cancel</button>
-            <button 
-              onClick={handleAddBike} 
+            <button
+              onClick={handleAddBike}
               disabled={loading || !newBike.name || !newBike.hub}
             >
               {loading ? 'Adding...' : 'Save Bike'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {isAddingHub && (
+        <div className="add-form">
+          <h2>Add New Hub</h2>
+          <input
+            type="text"
+            name="name"
+            placeholder="Hub Name"
+            value={newHub.name}
+            onChange={handleHubInputChange}
+          />
+          <input
+            type="text"
+            name="location"
+            placeholder="Location"
+            value={newHub.location}
+            onChange={handleHubInputChange}
+          />
+          <input
+            type="number"
+            name="capacity"
+            placeholder="Capacity"
+            value={newHub.capacity}
+            onChange={handleHubInputChange}
+            min="1"
+          />
+          <div className="form-actions">
+            <button onClick={() => setIsAddingHub(false)}>Cancel</button>
+            <button onClick={handleAddHub} disabled={loading || !newHub.name || !newHub.location}>
+              {loading ? 'Adding...' : 'Save Hub'}
             </button>
           </div>
         </div>
@@ -161,41 +224,21 @@ const MaintenanceAdmin = () => {
               <th>Bike</th>
               <th>Type</th>
               <th>Hub</th>
+              <th>Last Maintenance</th>
               <th>Status</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
-            {filteredBikes.map(bike => (
+            {bikes.map(bike => (
               <tr key={bike._id}>
-                <td>
-                  <div className="bike-info">
-                    {bike.image && <img src={bike.image} alt={bike.name} />}
-                    <div>
-                      <strong>{bike.name}</strong>
-                      <p>{bike.description}</p>
-                    </div>
-                  </div>
-                </td>
-                <td>{bike.type.charAt(0).toUpperCase() + bike.type.slice(1)}</td>
+                <td>{bike.name}</td>
+                <td>{bike.type}</td>
                 <td>{bike.hub?.name}</td>
+                <td>{bike.lastMaintenance ? new Date(bike.lastMaintenance).toLocaleDateString() : 'Never'}</td>
+                <td>{bike.status}</td>
                 <td>
-                  <select
-                    value={bike.status}
-                    onChange={(e) => updateBikeStatus(bike._id, e.target.value)}
-                  >
-                    <option value="available">Available</option>
-                    <option value="reserved">Reserved</option>
-                    <option value="maintenance">Maintenance</option>
-                  </select>
-                </td>
-                <td>
-                  <button 
-                    className="remove-btn"
-                    onClick={() => removeBike(bike._id)}
-                  >
-                    Remove
-                  </button>
+                  <button onClick={() => {/* handle bike removal */}}>Remove</button>
                 </td>
               </tr>
             ))}

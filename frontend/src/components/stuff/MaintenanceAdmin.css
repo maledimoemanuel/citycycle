@@ -23,6 +23,131 @@
   font-size: 1rem;
 }
 
+.view-controls {
+  margin: 20px 0;
+  display: flex;
+  gap: 10px;
+}
+
+.view-controls button {
+  padding: 8px 16px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+  background: white;
+}
+
+.view-controls button.active {
+  background: #4361ee;
+  color: white;
+  border-color: #4361ee;
+}
+
+.add-hub-form {
+  margin: 20px 0;
+  padding: 20px;
+  background: #f5f5f5;
+  border-radius: 8px;
+}
+
+.add-hub-form input {
+  display: block;
+  width: 100%;
+  margin: 10px 0;
+  padding: 8px;
+}
+
+.admin-bike-management {
+  padding: 20px;
+}
+
+.controls {
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  gap: 15px;
+}
+
+.view-controls {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.view-controls button {
+  padding: 8px 15px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+  background: white;
+}
+
+.view-controls button.active {
+  background: #4361ee;
+  color: white;
+  border-color: #4361ee;
+}
+
+
+.add-form {
+  margin: 20px 0;
+  padding: 20px;
+  background: #f5f5f5;
+  border-radius: 8px;
+}
+
+.add-form input,
+.add-form select,
+.add-form textarea {
+  width: 100%;
+  margin: 10px 0;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.form-actions {
+  margin-top: 15px;
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.bikes-list table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.bikes-list th,
+.bikes-list td {
+  padding: 12px;
+  border-bottom: 1px solid #eee;
+  text-align: left;
+}
+
+.bikes-list tr.maintenance {
+  background-color: #fff3cd;
+}
+
+.bikes-list tr.reserved {
+  background-color: #d4edda;
+}
+
+.bike-info img {
+  width: 100px;
+  height: auto;
+  margin-right: 15px;
+}
+
+.remove-btn {
+  background: #dc3545;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
 .controls select {
   border: 1px solid #ddd;
   min-width: 200px;

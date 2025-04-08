@@ -1,6 +1,7 @@
 import React, { useContext, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import AuthContext from '../context/AuthContext';
+import api from '../services/api';
 import './Auth.css';
 
 const Login = () => {
@@ -14,7 +15,7 @@ const Login = () => {
     e.preventDefault();
     try {
       await login(email, password);
-      navigate('/');
+      navigate('/bikelist');
     } catch (err) {
       setError('Invalid credentials');
     }

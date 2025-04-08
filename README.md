@@ -17,4 +17,9 @@ A bicycle-sharing platform for Amsterdam, built with the MERN stack.
 ```sh
 cd backend
 npm install
-npm run dev
+node server.js
+
+### Backend Setup
+cd frondend
+npm install
+npm start

@@ -11,6 +11,7 @@ const BikeList = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedHub, setSelectedHub] = useState('all');
   const [reservationSuccess, setReservationSuccess] = useState(null);
+  const [cancelReservationSuccess, setCancelReservationSuccess] = useState(null);
   const [loading, setLoading] = useState(false);
   const [bikes, setBikes] = useState([]);
   const [hubs, setHubs] = useState([]);
@@ -41,7 +42,7 @@ const BikeList = () => {
 
   const handleReserve = async (bikeId) => {
     if (!user) {
-      navigate('/login');
+      navigate('/');
       return;
     }
 
@@ -59,6 +60,21 @@ const BikeList = () => {
       setLoading(false);
     }
   };
+
+  const handleCancel = async (bikeId) => {
+    try {
+      await api.updateBike(bikeId, {status: 'available'})
+        setBikes(bikes.map(bike => 
+          bike._id === bikeId ? { ...bike, status: 'available' } : bike
+        ));
+        setCancelReservationSuccess('Reservation cancelled successfully!');
+        setTimeout(() => setCancelReservationSuccess(null), 3000);
+    } catch(err){
+      console.error('Cancellation failed', err);
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
     <div className="bike-list-container">
@@ -124,6 +140,12 @@ const BikeList = () => {
         </div>
       )}
 
+      {cancelReservationSuccess && (
+        <div className="cancel-reservation-success">
+          {cancelReservationSuccess}
+        </div>
+      )}
+
       <div className="bike-grid">
         {filteredBikes.length > 0 ? (
           filteredBikes.map(bike => (
@@ -145,13 +167,23 @@ const BikeList = () => {
                 </div>
                 <p className="bike-description">{bike.description}</p>
                 <div className="bike-footer">
-                  <button 
-                    className={`reserve-btn ${bike.status !== 'available' ? 'disabled' : ''}`}
-                    onClick={() => bike.status === 'available' && handleReserve(bike._id)}
-                    disabled={bike.status !== 'available' || loading}
-                  >
-                    {loading ? 'Processing...' : 'Reserve Now'}
-                  </button>
+                  {bike.status === 'reserved' ? (
+                    <button 
+                      className="cancel-btn"
+                      onClick={() => handleCancel(bike._id)}
+                      disabled={loading}
+                    >
+                      {loading ? 'Processing...' : '✖️Cancel'}
+                    </button>
+                  ) : (
+                    <button 
+                      className={`reserve-btn ${bike.status !== 'available' ? 'disabled' : ''}`}
+                      onClick={() => bike.status === 'available' && handleReserve(bike._id)}
+                      disabled={bike.status !== 'available' || loading}
+                    >
+                      {loading ? 'Processing...' : 'Reserve Now'}
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

@@ -166,6 +166,7 @@
 
 .bike-info {
   padding: 1.5rem;
+  flex-direction: column;
 }
 
 .bike-info h3 {
@@ -179,6 +180,7 @@
   flex-wrap: wrap;
   gap: 0.8rem;
   margin-bottom: 1rem;
+  justify-content: space-between;
 }
 
 .bike-type {
@@ -227,6 +229,21 @@
   cursor: pointer;
   transition: background-color 0.2s ease;
   font-weight: 600;
+}
+
+.cancel-btn{
+  padding: 0.5rem 1rem;
+  background-color: #e24a4a;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  font-weight: 600;
+}
+
+.cancel-btn:hover{
+  background-color: #c0392b;
 }
 
 .reserve-btn:hover {
@@ -286,5 +303,6 @@
   
   .bike-grid {
     grid-template-columns: 1fr;
+    flex-direction: column;
   }
 }

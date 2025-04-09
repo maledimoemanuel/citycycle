@@ -1,23 +1,35 @@
 import React, { useContext, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import AuthContext from '../context/AuthContext';
-import api from '../services/api';
 import './Auth.css';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const { login } = useContext(AuthContext);
   const navigate = useNavigate();
 
+  const handleInputChange = (setter) => (e) => {
+    setter(e.target.value);
+    setError(''); // Clear error on input change
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
     try {
-      await login(email, password);
-      navigate('/bikelist');
+      const result = await login(email, password);
+      if (!result.success) {
+        setError(result.error || 'Invalid credentials');
+      } else {
+        navigate('/bikelist');
+      }
     } catch (err) {
-      setError('Invalid credentials');
+      setError('An unexpected error occurred');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -30,18 +42,22 @@ const Login = () => {
           <input
             type="email"
             placeholder="Email"
+            aria-label="Email"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={handleInputChange(setEmail)}
             required
           />
           <input
             type="password"
             placeholder="Password"
+            aria-label="Password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={handleInputChange(setPassword)}
             required
           />
-          <button type="submit">Login</button>
+          <button type="submit" disabled={loading}>
+            {loading ? 'Logging in...' : 'Login'}
+          </button>
         </form>
         <div className="auth-links">
           <Link to="/register">Don't have an account? Register</Link>

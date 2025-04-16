@@ -13,21 +13,47 @@ const Login = () => {
 
   const handleInputChange = (setter) => (e) => {
     setter(e.target.value);
-    setError(''); // Clear error on input change
+    setError('');
+  };
+
+  const validateInputs = () => {
+    if (!email.trim()) {
+      setError('Email is required');
+      return false;
+    }
+    if (!password) {
+      setError('Password is required');
+      return false;
+    }
+    return true;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (!validateInputs()) {
+      return;
+    }
+
     setLoading(true);
+    setError('');
+
     try {
       const result = await login(email, password);
-      if (!result.success) {
-        setError(result.error || 'Invalid credentials');
-      } else {
-        navigate('/bikelist');
+      
+      if (!result?.success) {
+        const errorMessage = result?.error || 
+                            (result?.status === 401 ? 'Invalid email or password' : 
+                             'Login failed. Please try again.');
+        setError(errorMessage);
+        return;
       }
+      
+      navigate('/bikelist');
+      
     } catch (err) {
-      setError('An unexpected error occurred');
+      console.error('Login error:', err);
+      setError(err.message || 'An unexpected error occurred. Please try again later.');
     } finally {
       setLoading(false);
     }

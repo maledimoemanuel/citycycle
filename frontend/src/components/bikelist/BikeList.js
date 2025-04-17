@@ -19,6 +19,7 @@ const BikeList = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [sortOption, setSortOption] = useState('name-asc');
   const [favorites, setFavorites] = useState([]);
+  const { logout } = useContext(AuthContext);
   
   // Reservation related states
   const [selectedBike, setSelectedBike] = useState(null);
@@ -65,7 +66,7 @@ const BikeList = () => {
           setReservationHistory(res.data);
         }
       } catch (err) {
-        setError(err.response?.data?.message || 'Failed to load data. Please try again later.');
+        //setError(err.response?.data?.message || 'Failed to load data. Please try again later.');
         console.error('Failed to fetch data', err);
       } finally {
         setLoading(false);
@@ -106,8 +107,8 @@ const BikeList = () => {
 
   // Handlers
   const handleSignOut = () => {
-    setUser(null); 
-    navigate('/login'); 
+    logout();
+    navigate('/');
   };
 
   const toggleFavorite = (bikeId) => {
@@ -346,7 +347,7 @@ const BikeList = () => {
                       onClick={() => openModal(bike)}
                       disabled={bike.status !== 'available' || loading}
                     >
-                      {loading ? 'Processing...' : 'Reserve Now'}
+                      {loading ? 'Processing...' : 'Reserve Now🔖'}
                     </button>
                   )}
                 </div>

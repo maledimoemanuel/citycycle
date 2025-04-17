@@ -121,7 +121,7 @@ const BikeList = () => {
 
   const openModal = (bike) => {
     if (!user) {
-      navigate('/login');
+      navigate('/');
       return;
     }
     setSelectedBike(bike);

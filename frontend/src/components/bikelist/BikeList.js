@@ -5,7 +5,7 @@ import AuthContext from '../context/AuthContext';
 import api from '../services/api';
 
 const BikeList = () => {
-  const { user, setUser } = useContext(AuthContext); 
+  const { user, logout } = useContext(AuthContext);
   const navigate = useNavigate();
   
   // State variables
@@ -19,17 +19,16 @@ const BikeList = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [sortOption, setSortOption] = useState('name-asc');
   const [favorites, setFavorites] = useState([]);
-  const { logout } = useContext(AuthContext);
   
   // Reservation related states
   const [selectedBike, setSelectedBike] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [reservationDetails, setReservationDetails] = useState({
     date: '',
-    time: '',
+    startTime: '',
+    endTime: '',
   });
   const [reservationSuccess, setReservationSuccess] = useState(null);
-  const [cancelReservationSuccess, setCancelReservationSuccess] = useState(null);
   
   // User profile states
   const [showProfile, setShowProfile] = useState(false);
@@ -62,11 +61,11 @@ const BikeList = () => {
           if (savedFavorites) setFavorites(JSON.parse(savedFavorites));
           
           // Load reservation history
-          const res = await api.getUserReservations(user._id);
+          const res = await api.getUserReservations();
           setReservationHistory(res.data);
         }
       } catch (err) {
-        //setError(err.response?.data?.message || 'Failed to load data. Please try again later.');
+        setError(err.response?.data?.message || 'Failed to load data. Please try again later.');
         console.error('Failed to fetch data', err);
       } finally {
         setLoading(false);
@@ -84,7 +83,8 @@ const BikeList = () => {
 
   // Filter and sort bikes
   const filteredBikes = bikes.filter((bike) => {
-    const matchesFilter = filter === 'all' || bike.type === filter || (filter === 'favorites' && favorites.includes(bike._id));
+    const matchesFilter = filter === 'all' || bike.type === filter || 
+                         (filter === 'favorites' && favorites.includes(bike._id));
     const matchesSearch = bike.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          bike.description?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesHub = selectedHub === 'all' || bike.hub?._id === selectedHub;
@@ -119,7 +119,7 @@ const BikeList = () => {
     );
   };
 
-  const openModal = (bike) => {
+  const openReservationModal = (bike) => {
     if (!user) {
       navigate('/');
       return;
@@ -131,28 +131,38 @@ const BikeList = () => {
   const closeModal = () => {
     setShowModal(false);
     setSelectedBike(null);
-    setReservationDetails({ date: '', time: '' });
+    setReservationDetails({ date: '', startTime: '', endTime: '' });
   };
 
   const handleReserve = async () => {
-    if (!reservationDetails.date || !reservationDetails.time) {
-      setError('Please select a date and time.');
+    if (!reservationDetails.date || !reservationDetails.startTime || !reservationDetails.endTime) {
+      setError('Please select date and time range.');
+      return;
+    }
+
+    const reservedFrom = new Date(`${reservationDetails.date}T${reservationDetails.startTime}`);
+    const reservedUntil = new Date(`${reservationDetails.date}T${reservationDetails.endTime}`);
+
+    if (reservedUntil <= reservedFrom) {
+      setError('End time must be after start time.');
       return;
     }
 
     setLoading(true);
     try {
-      await api.updateBike(selectedBike._id, {
-        status: 'reserved',
-        reservedUntil: `${reservationDetails.date} ${reservationDetails.time}`,
+      const response = await api.createReservation({
+        bikeId: selectedBike._id,
+        reservedFrom: reservedFrom.toISOString(),
+        reservedUntil: reservedUntil.toISOString()
       });
       
+      // Update bike status in local state
       setBikes(bikes.map(bike => 
         bike._id === selectedBike._id ? { ...bike, status: 'reserved' } : bike
       ));
       
       // Update reservation history
-      const res = await api.getUserReservations(user._id);
+      const res = await api.getUserReservations();
       setReservationHistory(res.data);
       
       setReservationSuccess('Bike reserved successfully!');
@@ -165,26 +175,126 @@ const BikeList = () => {
     }
   };
 
-  const handleCancel = async (bikeId) => {
+  const handleCancelReservation = async (reservationId) => {
     setLoading(true);
     try {
-      await api.updateBike(bikeId, { status: 'available' });
-      
-      setBikes(bikes.map(bike => 
-        bike._id === bikeId ? { ...bike, status: 'available' } : bike
-      ));
+      await api.cancelReservation(reservationId);
       
       // Update reservation history
-      const res = await api.getUserReservations(user._id);
+      const res = await api.getUserReservations();
       setReservationHistory(res.data);
       
-      setCancelReservationSuccess('Reservation cancelled successfully!');
-      setTimeout(() => setCancelReservationSuccess(null), 3000);
+      // Find the bike in the reservation and update its status
+      const cancelledReservation = res.data.find(r => r._id === reservationId);
+      if (cancelledReservation) {
+        setBikes(bikes.map(bike => 
+          bike._id === cancelledReservation.bike._id ? { ...bike, status: 'available' } : bike
+        ));
+      }
+      
+      setReservationSuccess('Reservation cancelled successfully!');
+      setTimeout(() => setReservationSuccess(null), 3000);
     } catch (err) {
       setError(err.response?.data?.message || 'Cancellation failed. Please try again.');
     } finally {
       setLoading(false);
     }
+  };
+
+  // Render methods
+  const renderBikeCards = () => {
+    if (currentBikes.length === 0) {
+      return (
+        <div className="no-results">
+          <p>No bikes match your search criteria.</p>
+        </div>
+      );
+    }
+
+    return currentBikes.map((bike) => (
+      <div key={bike._id} className="bike-card">
+        <div 
+          className="bike-image"
+          onClick={() => {
+            setDetailedBike(bike);
+            setShowDetailModal(true);
+          }}
+        >
+          <img src={bike.image} alt={bike.name} />
+          <div className={`availability-badge ${bike.status.toLowerCase()}`}>
+            {bike.status === 'available' ? 'Available' : 
+             bike.status === 'reserved' ? 'Reserved' : 'Maintenance'}
+          </div>
+          {user && (
+            <button 
+              className={`favorite-btn ${favorites.includes(bike._id) ? 'active' : ''}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleFavorite(bike._id);
+              }}
+            >
+              {favorites.includes(bike._id) ? '❤️' : '🤍'}
+            </button>
+          )}
+        </div>
+        
+        <div className="bike-info">
+          <h3>{bike.name}</h3>
+          <div className="bike-meta">
+            <span className="bike-type">
+              {bike.type?.charAt(0)?.toUpperCase() + bike.type?.slice(1)} Bike
+            </span>
+            <span className="bike-hub">
+              <i className="location-icon">📍</i>
+              {bike.hub?.name}
+            </span>
+          </div>
+          <p className="bike-description">{bike.description}</p>
+          
+          <div className="bike-footer">
+            <button
+              className={`reserve-btn ${bike.status !== 'available' ? 'disabled' : ''}`}
+              onClick={() => openReservationModal(bike)}
+              disabled={bike.status !== 'available' || loading}
+            >
+              {loading ? 'Processing...' : 'Reserve Now'}
+            </button>
+          </div>
+        </div>
+      </div>
+    ));
+  };
+
+  const renderReservationHistory = () => {
+    if (reservationHistory.length === 0) {
+      return <p>No reservations found</p>;
+    }
+
+    return reservationHistory.map(res => (
+      <div key={res._id} className="reservation-item">
+        <img src={res.bike.image} alt={res.bike.name} />
+        <div className="reservation-details">
+          <h4>{res.bike.name}</h4>
+          <p><strong>Date:</strong> {new Date(res.reservedFrom).toLocaleDateString()}</p>
+          <p><strong>Time:</strong> {new Date(res.reservedFrom).toLocaleTimeString()} - {new Date(res.reservedUntil).toLocaleTimeString()}</p>
+          <p><strong>Status:</strong> 
+            <span className={`status-badge ${res.status.toLowerCase()}`}>
+              {res.status}
+            </span>
+          </p>
+          <p><strong>Hub:</strong> {res.bike.hub?.name}</p>
+        </div>
+        {res.status === 'active' && (
+          <button 
+            className="cancel-btn"
+            onClick={() => handleCancelReservation(res._id)}
+            disabled={loading}
+          >
+            {loading ? 'Processing...' : 'Cancel'}
+          </button>
+        )}
+      </div>
+    ));
   };
 
   return (
@@ -202,19 +312,26 @@ const BikeList = () => {
         <h1>Available Bikes</h1>
         
         {/* User controls */}
-        <div className="user-controls">
-          <button onClick={() => setShowProfile(!showProfile)}>
-            👤 {user?.name}
-          </button>
-          {showProfile && (
-            <div className="profile-dropdown">
-              <p>Email: {user?.email}</p>
-              <p>Member since: {new Date(user?.createdAt).toLocaleDateString()}</p>
-              <button onClick={() => setShowHistory(true)}>My Reservations</button>
-              <button onClick={handleSignOut}>Sign Out</button>
-            </div>
-          )}
-        </div>
+        {user ? (
+          <div className="user-controls">
+            <button onClick={() => setShowProfile(!showProfile)}>
+              👤 {user.name}
+            </button>
+            {showProfile && (
+              <div className="profile-dropdown">
+                <p>Email: {user.email}</p>
+                <p>Member since: {new Date(user.createdAt).toLocaleDateString()}</p>
+                <button onClick={() => setShowHistory(true)}>My Reservations</button>
+                <button onClick={handleSignOut}>Sign Out</button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="user-controls">
+            <button onClick={() => navigate('/')}>Login</button>
+            <button onClick={() => navigate('/register')}>Register</button>
+          </div>
+        )}
         
         {/* Filter controls */}
         <div className="filter-controls">
@@ -289,76 +406,10 @@ const BikeList = () => {
       {/* Error and success messages */}
       {error && <div className="error-message">{error}</div>}
       {reservationSuccess && <div className="success-message">{reservationSuccess}</div>}
-      {cancelReservationSuccess && <div className="success-message">{cancelReservationSuccess}</div>}
 
       {/* Bike grid */}
       <div className="bike-grid">
-        {currentBikes.length > 0 ? (
-          currentBikes.map((bike) => (
-            <div key={bike._id} className="bike-card">
-              <div 
-                className="bike-image"
-                onClick={() => {
-                  setDetailedBike(bike);
-                  setShowDetailModal(true);
-                }}
-              >
-                <img src={bike.image} alt={bike.name} />
-                <div className={`availability-badge ${bike.status.toLowerCase()}`}>
-                  {bike.status === 'available' ? 'Available' : 
-                   bike.status === 'reserved' ? 'Reserved' : 'Maintenance'}
-                </div>
-                <button 
-                  className={`favorite-btn ${favorites.includes(bike._id) ? 'active' : ''}`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleFavorite(bike._id);
-                  }}
-                >
-                  {favorites.includes(bike._id) ? '❤️' : '🤍'}
-                </button>
-              </div>
-              
-              <div className="bike-info">
-                <h3>{bike.name}</h3>
-                <div className="bike-meta">
-                  <span className="bike-type">
-                    {bike.type?.charAt(0)?.toUpperCase() + bike.type?.slice(1)} Bike
-                  </span>
-                  <span className="bike-hub">
-                    <i className="location-icon">📍</i>
-                    {bike.hub?.name}
-                  </span>
-                </div>
-                <p className="bike-description">{bike.description}</p>
-                
-                <div className="bike-footer">
-                  {bike.status === 'reserved' ? (
-                    <button
-                      className="cancel-btn"
-                      onClick={() => handleCancel(bike._id)}
-                      disabled={loading}
-                    >
-                      {loading ? 'Processing...' : '✖️ Cancel'}
-                    </button>
-                  ) : (
-                    <button
-                      className={`reserve-btn ${bike.status !== 'available' ? 'disabled' : ''}`}
-                      onClick={() => openModal(bike)}
-                      disabled={bike.status !== 'available' || loading}
-                    >
-                      {loading ? 'Processing...' : 'Reserve Now🔖'}
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))
-        ) : (
-          <div className="no-results">
-            <p>No bikes match your search criteria.</p>
-          </div>
-        )}
+        {renderBikeCards()}
       </div>
 
       {/* Pagination */}
@@ -421,13 +472,24 @@ const BikeList = () => {
               />
             </div>
             <div className="form-group">
-              <label>Time:</label>
+              <label>Start Time:</label>
               <input
                 type="time"
-                value={reservationDetails.time}
+                value={reservationDetails.startTime}
                 onChange={(e) => setReservationDetails({
                   ...reservationDetails,
-                  time: e.target.value
+                  startTime: e.target.value
+                })}
+              />
+            </div>
+            <div className="form-group">
+              <label>End Time:</label>
+              <input
+                type="time"
+                value={reservationDetails.endTime}
+                onChange={(e) => setReservationDetails({
+                  ...reservationDetails,
+                  endTime: e.target.value
                 })}
               />
             </div>
@@ -471,19 +533,13 @@ const BikeList = () => {
                   className="reserve-btn"
                   onClick={() => {
                     setShowDetailModal(false);
-                    openModal(detailedBike);
+                    openReservationModal(detailedBike);
                   }}
                 >
                   Reserve This Bike
                 </button>
               ) : (
-                <button 
-                  className="cancel-btn"
-                  onClick={() => handleCancel(detailedBike._id)}
-                  disabled={loading}
-                >
-                  {loading ? 'Processing...' : 'Cancel Reservation'}
-                </button>
+                <p className="not-available-msg">This bike is currently not available for reservation.</p>
               )}
             </div>
           </div>
@@ -498,31 +554,7 @@ const BikeList = () => {
             <button className="close-btn" onClick={() => setShowHistory(false)}>
               &times;
             </button>
-            
-            {reservationHistory.length > 0 ? (
-              <ul className="reservation-list">
-                {reservationHistory.map(res => (
-                  <li key={res._id}>
-                    <div className="reservation-item">
-                      <img src={res.bike.image} alt={res.bike.name} />
-                      <div>
-                        <h4>{res.bike.name}</h4>
-                        <p>Reserved until: {new Date(res.reservedUntil).toLocaleString()}</p>
-                        <p>Hub: {res.bike.hub?.name}</p>
-                      </div>
-                      <button 
-                        onClick={() => handleCancel(res.bike._id)}
-                        disabled={loading}
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p>No reservations found</p>
-            )}
+            {renderReservationHistory()}
           </div>
         </div>
       )}

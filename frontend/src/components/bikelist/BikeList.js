@@ -309,29 +309,32 @@ const BikeList = () => {
       
       {/* Header section */}
       <div className="bike-list-header">
-        <h1>Available Bikes</h1>
-        
-        {/* User controls */}
-        {user ? (
-          <div className="user-controls">
-            <button onClick={() => setShowProfile(!showProfile)}>
-              👤 {user.name}
-            </button>
-            {showProfile && (
-              <div className="profile-dropdown">
-                <p>Email: {user.email}</p>
-                <p>Member since: {new Date(user.createdAt).toLocaleDateString()}</p>
-                <button onClick={() => setShowHistory(true)}>My Reservations</button>
-                <button onClick={handleSignOut}>Sign Out</button>
+
+        <div className='header-c'>
+          <h1>Available Bikes</h1>
+          {/* User controls */}
+            {user ? (
+              <div className="user-controls">
+                <button onClick={() => setShowProfile(!showProfile)}>
+                  👤 {user.name}
+                </button>
+                {showProfile && (
+                  <div className="profile-dropdown">
+                    <p>Email: {user.email}</p>
+                    <p>Member since: {new Date(user.createdAt).toLocaleDateString()}</p>
+                    <button onClick={() => setShowHistory(true)}>My Reservations</button>
+                    <button onClick={handleSignOut}>Sign Out</button>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        ) : (
-          <div className="user-controls">
-            <button onClick={() => navigate('/')}>Login</button>
-            <button onClick={() => navigate('/register')}>Register</button>
-          </div>
-        )}
+            ) : (
+              <div className="user-controls">
+                <button onClick={() => navigate('/')}>Login</button>
+                <button onClick={() => navigate('/register')}>Register</button>
+              </div>
+            )}  
+        </div>
+        
         
         {/* Filter controls */}
         <div className="filter-controls">

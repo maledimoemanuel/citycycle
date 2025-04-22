@@ -9,6 +9,7 @@
 }
 
 /* Header section */
+
 .bike-list-header {
   margin-bottom: 2rem;
   display: flex;
@@ -27,6 +28,17 @@
 }
 
 /* User controls */
+.header-c {
+  display: flex;
+  align-items: center;
+  padding: 16px;
+  position: relative;
+}
+
+.header-c h1 {
+  flex: 1; 
+}
+
 .user-controls {
   position: relative;
   display: flex;

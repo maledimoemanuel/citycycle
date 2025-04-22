@@ -2,6 +2,7 @@ import React, { useContext, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import AuthContext from '../context/AuthContext';
 import './Auth.css';
+import { BounceLoader } from 'react-spinners';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -82,7 +83,7 @@ const Login = () => {
             required
           />
           <button type="submit" disabled={loading}>
-            {loading ? 'Logging in...' : 'Login'}
+            {loading ? <BounceLoader/> : 'Login'}
           </button>
         </form>
         <div className="auth-links">

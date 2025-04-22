@@ -23,6 +23,11 @@ export default {
     getMaintenanceDue: () => api.get('/bikes/maintenance-due'),
     addHub: (hubData) => api.post('/hubs', hubData),
 
+    //reservations
+    getUserReservations: () => api.get('/reservations/user'),
+    createReservation: (reservationData) => api.post('/reservations', reservationData),
+    cancelReservation: (reservationId) => api.delete(`/reservations/${reservationId}`),
+
     // Bikes
     getBikes: () => api.get('/bikes'),
     addBike: (bikeData) => api.post('/bikes', bikeData),

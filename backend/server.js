@@ -308,7 +308,7 @@ app.get('/api/reservations/user', auth, async (req, res) => {
   }
 });
 
-app.patch('/api/reservations/:id/cancel', auth, async (req, res) => {
+app.delete('/api/reservations/:id', auth, async (req, res) => {
   try {
     const reservation = await Reservation.findById(req.params.id)
       .populate('bike');

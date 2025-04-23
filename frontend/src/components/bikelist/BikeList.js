@@ -212,7 +212,7 @@ const BikeList = () => {
     }
 
     return currentBikes.map((bike) => (
-      <div key={bike._id} className="bike-card">
+      <div key={bike._id} className="bike-card show">
         <div 
           className="bike-image"
           onClick={() => {

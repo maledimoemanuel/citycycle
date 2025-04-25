@@ -1,92 +1,192 @@
-import { createContext, useState, useEffect } from 'react';
-import axios from 'axios';
+import { createContext, useState, useEffect, useCallback } from 'react';
 import api from '../services/api';
 
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  // Initialize state from localStorage if available
+  const [authState, setAuthState] = useState(() => {
+    const token = localStorage.getItem('token') || localStorage.getItem('adminToken');
+    const storedUser = localStorage.getItem('user');
+    
+    return {
+      user: storedUser ? JSON.parse(storedUser) : null,
+      loading: !!token, // Only true if token exists
+      error: null,
+      isAdmin: storedUser ? JSON.parse(storedUser).role === 'admin' : false
+    };
+  });
 
-  useEffect(() => {
-    const checkAuth = async () => {
-      const token = localStorage.getItem('token');
+  const normalizeUserData = (data) => ({
+    ...(data.user || data.admin || data),
+    id: (data.user || data.admin || data)?._id,
+    name: (data.user || data.admin || data)?.name,
+    email: (data.user || data.admin || data)?.email,
+    role: (data.user || data.admin || data)?.role || 'user'
+  });
+
+  const checkAuth = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('token') || localStorage.getItem('adminToken');
+      const storedUser = localStorage.getItem('user');
+
       if (!token) {
-        setLoading(false);
+        setAuthState(prev => ({ ...prev, loading: false }));
         return;
       }
 
-      try {
-        // Verify token by making a simple bikes request
-        await api.getBikes();
-        const userData = JSON.parse(localStorage.getItem('user'));
-        setUser(userData);
-      } catch (err) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        setError('Session expired. Please login again.');
-      } finally {
-        setLoading(false);
+      if (storedUser) {
+        const parsedUser = JSON.parse(storedUser);
+        setAuthState(prev => ({
+          ...prev,
+          user: parsedUser,
+          isAdmin: parsedUser.role === 'admin',
+          loading: true
+        }));
       }
-    };
 
-    checkAuth();
+      const endpoint = localStorage.getItem('adminToken') ? '/admin/data' : '/user';
+      const response = await api.get(endpoint);
+      
+      const userData = normalizeUserData(response.data);
+      
+      setAuthState({
+        user: userData,
+        loading: false,
+        error: null,
+        isAdmin: userData.role === 'admin'
+      });
+
+      localStorage.setItem('user', JSON.stringify(userData));
+    } catch (err) {
+      if (err.response?.status === 401) {
+        handleLogout();
+      }
+      setAuthState(prev => ({
+        ...prev,
+        loading: false,
+        error: err.response?.status === 401 
+          ? 'Session expired. Please login again.' 
+          : 'Failed to verify session'
+      }));
+    }
   }, []);
 
-  const login = async (email, password) => {
+  useEffect(() => {
+    checkAuth();
+  }, [checkAuth]);
+
+  const login = async (email, password, adminLogin = false) => {
     try {
-      setLoading(true);
-      setError(null);
-      const response = await api.login(email, password);
+      setAuthState(prev => ({ ...prev, loading: true, error: null }));
       
-      localStorage.setItem('token', response.data.token);
-      localStorage.setItem('user', JSON.stringify(response.data.user));
-      setUser(response.data.user);
-      return { success: true };
+      const response = adminLogin 
+        ? await api.adminLogin(email, password)
+        : await api.login(email, password);
+      
+      // Handle both user and admin responses
+      const userData = adminLogin 
+        ? normalizeUserData(response.data.admin)
+        : normalizeUserData(response.data.user);
+      
+      const token = response.data.token;
+  
+      if (!userData || !token) {
+        throw new Error('Invalid response from server');
+      }
+  
+      const tokenKey = adminLogin ? 'adminToken' : 'token';
+      localStorage.setItem(tokenKey, token);
+      localStorage.setItem('user', JSON.stringify(userData));
+      
+      setAuthState({
+        user: userData,
+        loading: false,
+        error: null,
+        isAdmin: adminLogin 
+      });
+      
+      return { 
+        success: true, 
+        isAdmin: adminLogin,
+        user: userData
+      };
     } catch (err) {
-      setError(err.response?.data?.error || 'Login failed');
-      return { success: false, error: err.response?.data?.error };
-    } finally {
-      setLoading(false);
+      const errorMessage = err.response?.data?.error || err.message || 'Login failed';
+      setAuthState(prev => ({
+        ...prev,
+        loading: false,
+        error: errorMessage
+      }));
+      return { 
+        success: false, 
+        error: errorMessage 
+      };
     }
   };
 
-  const register = async (email, password, role = 'user') => {
+  const register = async (name, email, password, role = 'user') => {
     try {
-      setLoading(true);
-      setError(null);
-      const response = await api.register(email, password, role);
+      setAuthState(prev => ({ ...prev, loading: true, error: null }));
+      
+      const response = await api.register(name, email, password, role);
+      const userData = normalizeUserData(response.data);
       
       localStorage.setItem('token', response.data.token);
-      localStorage.setItem('user', JSON.stringify(response.data.user));
-      setUser(response.data.user);
-      return { success: true };
+      localStorage.setItem('user', JSON.stringify(userData));
+      
+      setAuthState({
+        user: userData,
+        loading: false,
+        error: null,
+        isAdmin: userData.role === 'admin'
+      });
+      
+      return { success: true, user: userData };
     } catch (err) {
-      setError(err.response?.data?.error || 'Registration failed');
-      return { success: false, error: err.response?.data?.error };
-    } finally {
-      setLoading(false);
+      const errorMessage = err.response?.data?.error || 'Registration failed';
+      setAuthState(prev => ({
+        ...prev,
+        loading: false,
+        error: errorMessage
+      }));
+      return { 
+        success: false, 
+        error: errorMessage 
+      };
     }
   };
 
-  const logout = () => {
+  const handleLogout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('adminToken');
     localStorage.removeItem('user');
-    setUser(null);
+    setAuthState({
+      user: null,
+      loading: false,
+      error: null,
+      isAdmin: false
+    });
   };
+
+  const setError = (error) => setAuthState(prev => ({ ...prev, error }));
+
+  const checkAdmin = () => authState.user?.role === 'admin';
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      loading, 
-      error,
-      login, 
-      register, 
-      logout,
-      setError
+    <AuthContext.Provider value={{
+      user: authState.user,
+      loading: authState.loading,
+      error: authState.error,
+      isAdmin: authState.isAdmin,
+      login,
+      register,
+      logout: handleLogout,
+      setError,
+      checkAdmin,
+      refreshAuth: checkAuth
     }}>
-      {!loading && children}
+      {children}
     </AuthContext.Provider>
   );
 };

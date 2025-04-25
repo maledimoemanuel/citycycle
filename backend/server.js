@@ -24,7 +24,14 @@ const UserSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
-  role: { type: String, enum: ['user', 'admin'], default: 'user' },
+  createdAt: { type: Date, default: Date.now }
+});
+
+const AdminSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
+  permissions: { type: [String], default: [] },
   createdAt: { type: Date, default: Date.now }
 });
 
@@ -66,31 +73,43 @@ const ReservationSchema = new mongoose.Schema({
 });
 
 const User = mongoose.model('User', UserSchema);
+const Admin = mongoose.model('Admin', AdminSchema);
+
 const Hub = mongoose.model('Hub', HubSchema);
 const Bike = mongoose.model('Bike', BikeSchema);
 const Reservation = mongoose.model('Reservation', ReservationSchema);
 
 // Auth Middleware
-const auth = async (req, res, next) => {
+const userAuth = async (req, res, next) => {
   try {
     const token = req.header('Authorization').replace('Bearer ', '');
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret');
+    const decoded = jwt.verify(token, process.env.USER_SECRET || 'secret');
+    
+    // Check if it's a user token
+    if (decoded.type !== 'user') throw new Error();
+    
     const user = await User.findOne({ _id: decoded.id });
     if (!user) throw new Error();
+    
     req.user = user;
     next();
   } catch (err) {
-    res.status(401).send({ error: 'Please authenticate' });
+    res.status(401).send({ error: 'Please authenticate user' });
   }
 };
 
 const adminAuth = async (req, res, next) => {
   try {
     const token = req.header('Authorization').replace('Bearer ', '');
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret');
-    const user = await User.findOne({ _id: decoded.id });
-    if (!user || user.role !== 'admin') throw new Error();
-    req.user = user;
+    const decoded = jwt.verify(token, process.env.ADMIN_SECRET || 'admin_secret');
+    
+    // Check if it's an admin token
+    if (decoded.type !== 'admin') throw new Error();
+    
+    const admin = await Admin.findOne({ _id: decoded.id });
+    if (!admin) throw new Error();
+    
+    req.admin = admin;
     next();
   } catch (err) {
     res.status(403).send({ error: 'Admin access required' });
@@ -102,21 +121,19 @@ const adminAuth = async (req, res, next) => {
 // Auth Routes
 app.post('/api/register', async (req, res) => {
   try {
-    const { name, email, password, role } = req.body;
+    const { name, email, password } = req.body;
     
-    // Check if email already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).send({ error: 'Email already in use' });
     }
     
     const hashedPassword = await bcrypt.hash(password, 8);
-    const user = new User({ name, email, password: hashedPassword, role });
+    const user = new User({ name, email, password: hashedPassword });
     await user.save();
     
-    // Generate token
     const token = jwt.sign(
-      { id: user._id, role: user.role }, 
+      { id: user._id, type: 'user' }, 
       process.env.JWT_SECRET || 'secret',
       { expiresIn: '7d' }
     );
@@ -129,37 +146,91 @@ app.post('/api/register', async (req, res) => {
 
 app.post('/api/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
-    const user = await User.findOne({ email });
-    if (!user) throw new Error('Invalid credentials');
+    const { email, password, isAdmin } = req.body;
     
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) throw new Error('Invalid credentials');
-    
-    // Generate token
-    const token = jwt.sign(
-      { id: user._id, role: user.role }, 
-      process.env.JWT_SECRET || 'secret',
-      { expiresIn: '7d' }
-    );
-    
-    res.send({ 
-      user: { 
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        createdAt: user.createdAt
-      }, 
-      token 
-    });
+    if (isAdmin) {
+      const admin = await Admin.findOne({ email });
+      if (!admin) throw new Error('Invalid credentials');
+      
+      const isMatch = await bcrypt.compare(password, admin.password);
+      if (!isMatch) throw new Error('Invalid credentials');
+      
+      const token = jwt.sign(
+        { id: admin._id, type: 'admin' }, 
+        process.env.JWT_SECRET || 'secret',
+        { expiresIn: '7d' }
+      );
+      
+      return res.send({ 
+        token: userToken,
+        user: {
+          _id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role
+        }
+      });
+    } else {
+      const user = await User.findOne({ email });
+      if (!user) throw new Error('Invalid credentials');
+      
+      const isMatch = await bcrypt.compare(password, user.password);
+      if (!isMatch) throw new Error('Invalid credentials');
+      
+      const token = jwt.sign(
+        { id: user._id, type: 'user' }, 
+        process.env.JWT_SECRET || 'secret',
+        { expiresIn: '7d' }
+      );
+      
+      return res.send({ 
+        user: { 
+          _id: user._id,
+          name: user.name,
+          email: user.email,
+          createdAt: user.createdAt
+        }, 
+        token 
+      });
+    }
   } catch (err) {
     res.status(400).send({ error: err.message });
   }
 });
 
+// Admin Login Route 
+app.post('/api/admin/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    
+    const admin = await Admin.findOne({ email });
+    if (!admin) throw new Error('Invalid admin credentials');
+    
+    const isMatch = await bcrypt.compare(password, admin.password);
+    if (!isMatch) throw new Error('Invalid admin credentials');
+    
+    const token = jwt.sign(
+      { id: admin._id, type: 'admin' },
+      process.env.ADMIN_SECRET || 'admin_secret', 
+      { expiresIn: '1d' }
+    );
+    
+    res.send({ 
+      token, 
+      admin: {
+        _id: admin._id,
+        name: admin.name,
+        email: admin.email,
+        permissions: admin.permissions
+      }
+    });
+  } catch (err) {
+    res.status(401).send({ error: err.message });
+  }
+});
+
 // User Routes
-app.get('/api/user', auth, async (req, res) => {
+app.get('/api/user', userAuth, async (req, res) => {
   try {
     res.send(req.user);
   } catch (err) {
@@ -214,7 +285,7 @@ app.post('/api/bikes', adminAuth, async (req, res) => {
   }
 });
 
-app.patch('/api/bikes/:id', auth, async (req, res) => {
+app.patch('/api/bikes/:id', userAuth, async (req, res) => {
   const updates = Object.keys(req.body);
   const allowedUpdates = ['status', 'lastMaintenance'];
   
@@ -256,7 +327,7 @@ app.delete('/api/bikes/:id', adminAuth, async (req, res) => {
 });
 
 // Reservation Routes
-app.post('/api/reservations', auth, async (req, res) => {
+app.post('/api/reservations', userAuth, async (req, res) => {
   try {
     const { bikeId, reservedFrom, reservedUntil } = req.body;
     
@@ -296,7 +367,7 @@ app.post('/api/reservations', auth, async (req, res) => {
   }
 });
 
-app.get('/api/reservations/user', auth, async (req, res) => {
+app.get('/api/reservations/user', userAuth, async (req, res) => {
   try {
     const reservations = await Reservation.find({ user: req.user._id })
       .populate('bike')
@@ -308,7 +379,7 @@ app.get('/api/reservations/user', auth, async (req, res) => {
   }
 });
 
-app.delete('/api/reservations/:id', auth, async (req, res) => {
+app.delete('/api/reservations/:id', userAuth, async (req, res) => {
   try {
     const reservation = await Reservation.findById(req.params.id)
       .populate('bike');

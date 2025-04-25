@@ -285,7 +285,7 @@ app.post('/api/reservations', auth, async (req, res) => {
     bike.status = 'reserved';
     await bike.save();
     
-    // Populate bike and user details
+    // bike and user details
     const populatedReservation = await Reservation.findById(reservation._id)
       .populate('user', 'name email')
       .populate('bike');
